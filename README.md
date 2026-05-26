@@ -1,4 +1,4 @@
-# ShopStack — React + FastAPI + SQLite
+# ShopStack — React + FastAPI + mysql
 
 A full-stack product management app where:
 - **Anyone** (no login) can browse all products
