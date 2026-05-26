@@ -5,72 +5,69 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional, List
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+from dotenv import load_dotenv
+import bcrypt
+import os
+
 import models, schemas, crud
 from database import SessionLocal, engine
-from sqlalchemy.orm import Session
 
+# ── Create all tables in MySQL ─────────────────────────────────────────────────
 models.Base.metadata.create_all(bind=engine)
 
-# ── App setup ────────────────────────────────────────────────────────────────
+# ── Load environment variables ─────────────────────────────────────────────────
+load_dotenv()
+
+SECRET_KEY                = os.getenv("SECRET_KEY")
+ALGORITHM                 = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+
+# ── App setup ──────────────────────────────────────────────────────────────────
 app = FastAPI(title="Product Manager API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # ✅ FIX THIS
-    allow_credentials=True,
+    allow_origins=["http://localhost:3000"],           # restrict to your frontend URL in production
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
-
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── DB dependency ──────────────────────────────────────────────────────────────
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-        
-import bcrypt                                       # ← bcrypt directly (no passlib)
 
-def verify_password(plain, hashed):
+
+# ── Password helpers ───────────────────────────────────────────────────────────
+def verify_password(plain: str, hashed: str) -> bool:
     pw = plain.encode("utf-8")[:72]
-    return bcrypt.checkpw(pw, hashed.encode("utf-8"))  # ← works perfectly
+    return bcrypt.checkpw(pw, hashed.encode("utf-8"))
 
-def hash_password(password):
+
+def hash_password(password: str) -> str:
     pw = password.encode("utf-8")[:72]
-    return bcrypt.hashpw(pw, bcrypt.gensalt()).decode("utf-8")  # ← works perfectly
-
-allow_origins=["*"],          # ← CORS allows frontend
-allow_credentials=False,
+    return bcrypt.hashpw(pw, bcrypt.gensalt()).decode("utf-8")
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+# ── JWT helpers ────────────────────────────────────────────────────────────────
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -83,6 +80,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
+
     user = crud.get_user_by_username(db, username)
     if user is None:
         raise credentials_exception
@@ -90,7 +88,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 
 # ── Auth routes ────────────────────────────────────────────────────────────────
-@app.post("/register", response_model=schemas.UserOut)
+@app.post("/register", response_model=schemas.UserOut, status_code=201)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if crud.get_user_by_username(db, user.username):
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -99,7 +97,10 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/token", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
     user = crud.get_user_by_username(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
@@ -137,7 +138,7 @@ def create_product(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Owner only – create a product."""
+    """Auth required – create a product."""
     return crud.create_product(db, product, owner_id=current_user.id)
 
 
@@ -148,7 +149,7 @@ def update_product(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Owner only – update own product."""
+    """Auth required – update own product."""
     db_product = crud.get_product(db, product_id)
     if not db_product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -163,7 +164,7 @@ def delete_product(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Owner only – delete own product."""
+    """Auth required – delete own product."""
     db_product = crud.get_product(db, product_id)
     if not db_product:
         raise HTTPException(status_code=404, detail="Product not found")
