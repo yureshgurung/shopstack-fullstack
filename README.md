@@ -112,7 +112,8 @@ CREATE DATABASE shopstack;
 Environment variable:
 
 ```
-DATABASE_URL=mysql+pymysql://root:password@localhost:3306/shopstack
+DATABASE_URL=mysql+pymysql://root:mysql@localhost:3306/shopstack
+
 ```
 
 ---
