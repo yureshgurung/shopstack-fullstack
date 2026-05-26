@@ -10,54 +10,59 @@ A full-stack product management app where:
 
 ```
 project/
-├── backend/
-│   ├── main.py        ← FastAPI app, routes, auth
-│   ├── database.py    ← SQLite connection (SQLAlchemy)
-│   ├── models.py      ← DB tables: User, Product
-│   ├── schemas.py     ← Pydantic request/response shapes
-│   ├── crud.py        ← DB operations (create, read, update, delete)
-│   └── requirements.txt
 │
-└── frontend/
-    ├── src/
-    │   ├── context/AuthContext.jsx  ← login state, token storage
-    │   ├── components/
-    │   │   ├── Navbar.jsx
-    │   │   ├── ProductCard.jsx
-    │   │   └── ProductModal.jsx    ← create/edit form
-    │   ├── pages/
-    │   │   ├── ProductsPage.jsx    ← public listing
-    │   │   ├── DashboardPage.jsx   ← owner dashboard
-    │   │   ├── LoginPage.jsx
-    │   │   └── RegisterPage.jsx
-    │   ├── api.js                  ← fetch helper
-    │   ├── App.jsx                 ← routing
-    │   └── index.css
-    ├── index.html
-    ├── package.json
-    └── vite.config.js
+├── backend/
+│   ├── main.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── crud.py
+│   ├── requirements.txt
+│   ├── Dockerfile
+│
+├── frontend/
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── Dockerfile
+│   ├── index.css
+│   │
+│   └── src/
+│       ├── App.jsx
+│       ├── api.js
+│       │
+│       ├── context/
+│       │   └── AuthContext.jsx
+│       │
+│       ├── components/
+│       │   ├── Navbar.jsx
+│       │   ├── ProductCard.jsx
+│       │   └── ProductModal.jsx
+│       │
+│       └── pages/
+│           ├── ProductsPage.jsx
+│           ├── DashboardPage.jsx
+│           ├── LoginPage.jsx
+│           └── RegisterPage.jsx
+│
+└── docker-compose.yml
 ```
 
+
+---
+## Installation
 ---
 
-## Setup & Run
-
-### 1. Backend (FastAPI)
+### Clone Repository
 
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-- API runs at: http://localhost:8000
-- Auto-docs:   http://localhost:8000/docs   ← try all endpoints here!
-
-> SQLite DB file (`products.db`) is created automatically on first run.
+git clone <repo-url>
+cd product-management-system
+````
 
 ---
 
-### 2. Frontend (React + Vite)
+## Frontend Setup
 
 ```bash
 cd frontend
@@ -65,42 +70,88 @@ npm install
 npm run dev
 ```
 
-- App runs at: http://localhost:5173
+Frontend runs on:
+
+```
+http://localhost:5173
+```
 
 ---
 
-## How it Works
+## Backend Setup
 
-### Database (SQLite — easiest to understand)
-- **No installation needed** — it's just a file (`products.db`)
-- Two tables: `users` and `products`
-- `products.owner_id` links each product to its creator
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+```
 
-### Auth Flow
-1. Register → POST /register → password is **bcrypt hashed**, stored in DB
-2. Login → POST /token → returns a **JWT token**
-3. Token is saved in `localStorage` and sent as `Authorization: Bearer <token>` header
-4. Protected routes read the token, decode it, find the user
+Run server:
 
-### Permission Logic
-| Action           | Who can do it         |
-|------------------|-----------------------|
-| View all products | Everyone (public)    |
-| Create product   | Any logged-in user    |
-| Edit product     | Only the owner        |
-| Delete product   | Only the owner        |
+```bash
+uvicorn app.main:app --reload
+```
+
+Backend runs on:
+
+```
+http://localhost:8000
+```
 
 ---
 
-## API Endpoints
+## MySQL Setup
 
-| Method | Path                  | Auth? | Description          |
-|--------|-----------------------|-------|----------------------|
-| POST   | /register             | No    | Create account       |
-| POST   | /token                | No    | Login → get token    |
-| GET    | /me                   | Yes   | Get current user     |
-| GET    | /products             | No    | List all products    |
-| GET    | /products/{id}        | No    | Get one product      |
-| POST   | /products             | Yes   | Create product       |
-| PUT    | /products/{id}        | Yes   | Update own product   |
-| DELETE | /products/{id}        | Yes   | Delete own product   |
+Create database:
+
+```sql
+CREATE DATABASE shopstack;
+```
+
+Environment variable:
+
+```
+DATABASE_URL=mysql+pymysql://root:password@localhost:3306/shopstack
+```
+
+---
+
+## Docker (Optional)
+
+```bash
+docker compose up --build
+```
+
+---
+
+## Features
+
+* User authentication (JWT)
+* Product CRUD operations
+* Dashboard management
+* REST API backend
+* Responsive frontend
+
+---
+
+## API Documentation
+
+Swagger UI:
+
+```
+http://localhost:8000/docs
+```
+---
+
+## Run Project
+
+Run backend and frontend separately or use Docker Compose.
+
+```
+```
+
+
+<img width="1874" height="948" alt="image" src="https://github.com/user-attachments/assets/8ee377e6-a5a5-4f64-a853-22567aedb3ca" />
+
+<img width="1919" height="972" alt="image" src="https://github.com/user-attachments/assets/658b1eef-c796-442c-bf5f-e74fc7ed115d" />
