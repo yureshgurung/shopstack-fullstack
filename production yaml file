@@ -7,22 +7,23 @@ services:
     container_name: mysql-db
     restart: always
 
-    environment:
-      MYSQL_ROOT_PASSWORD: mysql
-      MYSQL_DATABASE: shopstack
+    env_file:
+      - .env
 
-   # Use old MySQL password authentication
-   # for compatibility with some apps/drivers
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+
     command: --default-authentication-plugin=mysql_native_password
 
     ports:
       - "3307:3306"
 
     volumes:
-      - mysql_data:/var/lib/mysql   # ✅ DB storage (IMPORTANT)
+      - mysql_data:/var/lib/mysql
 
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmysql"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -37,24 +38,22 @@ services:
     container_name: backend-app
     restart: always
 
+    env_file:
+      - .env
+
     ports:
       - "8000:8000"
 
     environment:
       MYSQL_HOST: mysql
-      
       MYSQL_USER: root
-      MYSQL_PASSWORD: mysql
-      MYSQL_DB: shopstack
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
       MYSQL_PORT: 3306
 
-      SECRET_KEY: your_secret_key
+      SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
-
-    volumes:
-      - backend_logs:/app/logs   # ✅ backend logs storage (optional)
-      - backend_uploads:/app/uploads  # ✅ if you upload files
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
 
     depends_on:
       mysql:
@@ -79,19 +78,9 @@ services:
       - shop-network
 
 
-# =========================
-# STORAGE (VOLUMES)
-# =========================
 volumes:
-  mysql_data:        # ✅ keeps database even if container deleted
-  backend_logs:      # optional
-  backend_uploads:   # optional
-  frontend_cache:    # optional
+  mysql_data:
 
-
-# =========================
-# NETWORK
-# =========================
 networks:
   shop-network:
     driver: bridge

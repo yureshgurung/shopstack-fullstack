@@ -13,12 +13,18 @@ RUN npm run build
 
 
 # =========================
-# 2. Serve Stage
+# 2. Run Stage (NO NGINX)
 # =========================
-FROM nginx:alpine
+FROM node:22-alpine
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-EXPOSE 80
+# install static server
+RUN npm install -g serve
 
-CMD ["nginx", "-g", "daemon off;"]
+# copy build output
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "dist", "-l", "3000"]

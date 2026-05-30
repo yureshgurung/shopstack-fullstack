@@ -12,6 +12,7 @@ class User(Base):
     email          = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     created_at     = Column(DateTime, default=datetime.utcnow)
+    age            = Column(Integer, nullable=True)
 
     products = relationship("Product", back_populates="owner", cascade="all, delete-orphan")
 

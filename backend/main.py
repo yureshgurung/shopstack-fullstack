@@ -12,6 +12,44 @@ import os
 import models, schemas, crud
 from database import SessionLocal, engine
 
+
+import logging
+import sys
+
+# ============================================
+# LOGGING SETUP (12-Factor: stdout only)
+# ============================================
+
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s [%(levelname)s] %(message)s",
+#     stream=sys.stdout,   # log to console/stdout
+#     force=True
+# )
+
+# logger = logging.getLogger(__name__)
+import logging
+import sys
+from pythonjsonlogger import jsonlogger
+
+logger = logging.getLogger("app")
+logger.setLevel(logging.INFO)
+
+# remove old handlers (VERY IMPORTANT)
+logger.handlers.clear()
+
+handler = logging.StreamHandler(sys.stdout)
+
+formatter = jsonlogger.JsonFormatter(
+    "%(asctime)s %(levelname)s %(name)s %(message)s"
+)
+
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+
+logger.propagate = False
+
 # ── Create all tables in MySQL ─────────────────────────────────────────────────
 models.Base.metadata.create_all(bind=engine)
 
@@ -27,8 +65,8 @@ app = FastAPI(title="Product Manager API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],           # restrict to your frontend URL in production
-    allow_credentials=False,
+    allow_origins=["*"],  # development only
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -88,26 +126,62 @@ def get_current_user(
 
 
 # ── Auth routes ────────────────────────────────────────────────────────────────
+# @app.post("/register", response_model=schemas.UserOut, status_code=201)
+# def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+#     if crud.get_user_by_username(db, user.username):
+#         raise HTTPException(status_code=400, detail="Username already registered")
+#     hashed = hash_password(user.password)
+#     return crud.create_user(db, user, hashed)
 @app.post("/register", response_model=schemas.UserOut, status_code=201)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+
+    logger.info(f"Register attempt: {user.username}")
+
     if crud.get_user_by_username(db, user.username):
+        logger.warning(f"Username already exists: {user.username}")
         raise HTTPException(status_code=400, detail="Username already registered")
+
     hashed = hash_password(user.password)
+
+    logger.info(f"User created successfully: {user.username}")
+
     return crud.create_user(db, user, hashed)
 
 
+# @app.post("/token", response_model=schemas.Token)
+# def login(
+#     form_data: OAuth2PasswordRequestForm = Depends(),
+#     db: Session = Depends(get_db),
+# ):
+#     user = crud.get_user_by_username(db, form_data.username)
+#     if not user or not verify_password(form_data.password, user.hashed_password):
+#         raise HTTPException(status_code=400, detail="Incorrect username or password")
+#     token = create_access_token(
+#         data={"sub": user.username},
+#         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+#     )
+#     return {"access_token": token, "token_type": "bearer"}
 @app.post("/token", response_model=schemas.Token)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+
+    logger.info(f"Login attempt: {form_data.username}")
+
     user = crud.get_user_by_username(db, form_data.username)
+
     if not user or not verify_password(form_data.password, user.hashed_password):
+        logger.warning(f"Failed login: {form_data.username}")
         raise HTTPException(status_code=400, detail="Incorrect username or password")
+
+    logger.info(f"Login successful: {form_data.username}")
+
     token = create_access_token(
         data={"sub": user.username},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
+
     return {"access_token": token, "token_type": "bearer"}
 
 
