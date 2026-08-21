@@ -57,7 +57,7 @@ project/
 
 ```bash
 git clone <repo-url>
-cd product-management-system
+cd  SHOPSTACK-FULLSTACK
 ````
 
 ---
@@ -73,7 +73,7 @@ npm run dev
 Frontend runs on:
 
 ```
-http://localhost:5173
+http://localhost:3000
 ```
 
 ---
