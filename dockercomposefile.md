@@ -796,3 +796,6 @@ http://localhost:8000
 FastAPI Swagger
 http://localhost:8000/docs
 ```
+
+
+end 
